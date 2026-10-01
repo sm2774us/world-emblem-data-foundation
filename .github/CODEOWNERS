@@ -1,8 +1,8 @@
-* @sm2774us
-/.github/ @sm2774us
-/infra/ @sm2774us
-/src/emblem/security/ @sm2774us
-/src/emblem/data/governance/ @sm2774us
-/src/emblem/data/architecture/ @sm2774us
-/src/emblem/data/contracts/ @sm2774us
-/.gitleaks.toml @sm2774us
+* @YOUR_GITHUB_USER
+/.github/ @YOUR_GITHUB_USER
+/infra/ @YOUR_GITHUB_USER
+/src/emblem/security/ @YOUR_GITHUB_USER
+/src/emblem/data/governance/ @YOUR_GITHUB_USER
+/src/emblem/data/architecture/ @YOUR_GITHUB_USER
+/src/emblem/data/contracts/ @YOUR_GITHUB_USER
+/.gitleaks.toml @YOUR_GITHUB_USER

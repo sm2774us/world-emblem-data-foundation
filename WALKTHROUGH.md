@@ -344,9 +344,9 @@ gh repo edit --add-topic data-engineering --add-topic python --add-topic uv --ad
 ```
 (If you have nothing new to commit, the `commit` line says so; continue.) Before pushing run the secret scan (Part 4) and confirm `.env` is not tracked (`git ls-files .env` prints nothing). The repository is **public**: never commit a real key.
 
-If your GitHub username is not `sm2774us`, replace it in `.github/CODEOWNERS`, `README.md` and `.github/ISSUE_TEMPLATE/config.yml` **before** the push:
+If your GitHub username is not `YOUR_GITHUB_USER`, replace it in `.github/CODEOWNERS`, `README.md` and `.github/ISSUE_TEMPLATE/config.yml` **before** the push:
 ```bash
-grep -rl sm2774us . --exclude-dir=.git --exclude-dir=.venv | xargs sed -i 's/sm2774us/YOUR_GITHUB_USER/g'
+grep -rl YOUR_GITHUB_USER . --exclude-dir=.git --exclude-dir=.venv | xargs sed -i 's/YOUR_GITHUB_USER/YOUR_GITHUB_USER/g'
 ```
 (Windows: VS Code Replace in Files, Ctrl+Shift+H.) Then `git add -A && git commit -m "docs: set repository owner"`.
 

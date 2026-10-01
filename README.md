@@ -1,6 +1,6 @@
 # World Emblem Data Foundation
 
-[![ci](https://github.com/sm2774us/world-emblem-data-foundation/actions/workflows/pr-verification.yml/badge.svg)](https://github.com/sm2774us/world-emblem-data-foundation/actions/workflows/pr-verification.yml)
+[![ci](https://github.com/YOUR_GITHUB_USER/world-emblem-data-foundation/actions/workflows/pr-verification.yml/badge.svg)](https://github.com/YOUR_GITHUB_USER/world-emblem-data-foundation/actions/workflows/pr-verification.yml)
 
 A working, tested showcase for the **Senior Data Engineer / Data Architect** role at World Emblem International. It does not describe the job; it does it, on synthetic data: audit the estate, decide the architecture, build governed pipelines, prove quality, enforce governance, enable BI and AI, and execute a **machine-verified 90-day plan**.
 
