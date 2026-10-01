@@ -1,0 +1,8 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    { "label": "demo", "type": "shell", "command": "uv run emblem demo", "problemMatcher": [] },
+    { "label": "serve", "type": "shell", "command": "uv run emblem serve", "isBackground": true, "problemMatcher": [] },
+    { "label": "verify (lint, types, tests)", "type": "shell", "command": "uv run ruff check src tests dags tools && uv run mypy && uv run pytest -m \"not e2e and not spark and not airflow\" --cov", "problemMatcher": [] }
+  ]
+}

@@ -85,7 +85,7 @@ More in [WALKTHROUGH.md](WALKTHROUGH.md).
 ## 6. CI/CD, testing and GitHub best practices
 * **Pyramid:** unit (pure logic, failure modes) > integration (real DuckDB pipeline, API via TestClient, Spark parity, Airflow DagBag) > e2e (real CLI + uvicorn + HTTP, no mocks). Coverage gate 85%.
 * **Pipeline** (`pr-verification.yml`): guard (Conventional-Commit PR title, no Dependabot/Renovate) -> **gitleaks full-history** -> ruff/mypy/tests -> e2e, Spark, Airflow, dbt, Docker hardened smoke (read-only, non-root, cap-drop, refuses unsafe prod config), Terraform fmt/validate -> single required check `ci-ok (required check)`.
-* **Branch protection** (`.github/rulesets/protect-main.json`): PR required, CODEOWNERS review, signed commits, linear history, squash only, stale-review dismissal, required status check.
+* **Branch protection** (`.github/rulesets/protect-main.json`): PR required, CODEOWNERS review, linear history, squash only, stale-review dismissal, required status check.
 * **Supply chain:** actions pinned to commit SHAs, locked dependencies, SBOM + provenance attestation, OIDC (no stored cloud keys), manual approval environment for releases.
 * **Secrets:** `.gitleaks.toml` (default ruleset + project rules, minimal synthetic allow-list) in pre-commit hook, PR job and weekly scan.
 * **Releases:** SemVer + CHANGELOG generated from Conventional Commits (`tools/release.py`, tested).

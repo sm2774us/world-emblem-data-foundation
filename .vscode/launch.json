@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    { "name": "1 · API server (debug)", "type": "debugpy", "request": "launch", "module": "emblem",
+      "args": ["serve", "--port", "8000"], "env": { "EMBLEM_ENV": "dev" }, "justMyCode": false },
+    { "name": "2 · Demo pipeline (debug)", "type": "debugpy", "request": "launch", "module": "emblem", "args": ["demo"], "justMyCode": false },
+    { "name": "3 · Pytest: current file", "type": "debugpy", "request": "launch", "module": "pytest",
+      "args": ["${file}", "--no-cov", "-x", "-s"], "justMyCode": false },
+    { "name": "4 · CLI: any command", "type": "debugpy", "request": "launch", "module": "emblem",
+      "args": ["${input:cmd}"], "justMyCode": false },
+    { "name": "5 · Attach to a running process (port 5678)", "type": "debugpy", "request": "attach", "connect": { "host": "127.0.0.1", "port": 5678 } }
+  ],
+  "inputs": [{ "id": "cmd", "type": "pickString", "description": "emblem sub-command", "options": ["audit", "quality", "reconcile", "incidents", "plan verify", "platform", "vendors", "lineage"], "default": "audit" }]
+}
