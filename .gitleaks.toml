@@ -8,7 +8,8 @@ useDefault = true
 [[rules]]
 id = "emblem-secret-assignment"
 description = "Hardcoded EMBLEM_* secret/key/token assigned a literal value"
-regex = '''(?i)EMBLEM_(MASTER_SECRET|AUTH_SECRET|WEBHOOK_SECRET|ALERT_WEBHOOK)\s*[:=]\s*["']?[A-Za-z0-9/+_\-]{12,}["']?'''
+regex = '''(?i)EMBLEM_(?:MASTER_SECRET|AUTH_SECRET|WEBHOOK_SECRET|ALERT_WEBHOOK)\s*[:=]\s*["']?([A-Za-z0-9/+_\-]{12,})["']?'''
+secretGroup = 1
 tags = ["emblem", "secret"]
 
 [[rules]]
