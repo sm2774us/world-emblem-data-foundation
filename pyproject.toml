@@ -1,6 +1,6 @@
 [project]
 name = "world-emblem-data-foundation"
-version = "1.0.0"
+version = "1.1.0"
 description = "Governed enterprise data foundation showcase: audit, architecture, pipelines, quality, governance, AI enablement and a 90-day plan."
 readme = "README.md"
 license = { text = "MIT" }
