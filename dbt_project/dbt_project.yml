@@ -1,0 +1,8 @@
+name: world_emblem
+version: "1.0.0"
+config-version: 2
+profile: world_emblem
+model-paths: ["models"]
+models:
+  world_emblem:
+    +materialized: table

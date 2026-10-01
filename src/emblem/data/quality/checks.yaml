@@ -1,0 +1,51 @@
+# Declarative data-quality checks. Each SQL returns ONE number (observed). op: max => observed must be <= threshold; min => >=.
+# `{as_of}` is substituted with the business date so runs are reproducible. `source_fix` = what the business owner changes at the SOURCE.
+checks:
+  - {id: dq_bc_customer_email_complete, dataset: bc.customers, dimension: completeness, severity: warning, domain: company, op: max, threshold: 0.02,
+     sql: "SELECT count(*) FILTER (WHERE email IS NULL) * 1.0 / count(*) FROM silver.stg_bc__customers",
+     source_fix: "Finance: make AP email mandatory on the BC customer card; backfill from HubSpot", runbook: duplicate-customers}
+  - {id: dq_hs_contact_email_complete, dataset: hs.contacts, dimension: completeness, severity: warning, domain: contact, op: max, threshold: 0.02,
+     sql: "SELECT count(*) FILTER (WHERE email IS NULL) * 1.0 / count(*) FROM silver.stg_hs__contacts",
+     source_fix: "Sales Ops: require email on HubSpot contact create form and import templates", runbook: duplicate-customers}
+  - {id: dq_bc_item_price_complete, dataset: bc.items, dimension: completeness, severity: error, domain: product, op: max, threshold: 0,
+     sql: "SELECT count(*) FROM silver.stg_bc__items WHERE unit_price IS NULL", source_fix: "Operations: item price is mandatory in BC", runbook: pipeline-failure}
+  - {id: dq_line_quantity_positive, dataset: bc.sales_lines, dimension: accuracy, severity: error, domain: order, op: max, threshold: 0,
+     sql: "SELECT count(*) FROM silver.stg_bc__sales_lines WHERE quantity <= 0",
+     source_fix: "Finance: add BC validation: sales line quantity must be > 0 (returns use credit memos)", runbook: bad-values}
+  - {id: dq_line_price_nonzero, dataset: bc.sales_lines, dimension: accuracy, severity: warning, domain: order, op: max, threshold: 0.005,
+     sql: "SELECT count(*) FILTER (WHERE unit_price = 0) * 1.0 / count(*) FROM silver.stg_bc__sales_lines",
+     source_fix: "Finance: block zero-price lines unless item flagged 'sample' in BC", runbook: bad-values}
+  - {id: dq_order_not_future_dated, dataset: bc.sales_orders, dimension: accuracy, severity: error, domain: order, op: max, threshold: 0,
+     sql: "SELECT count(*) FROM silver.stg_bc__sales_orders WHERE order_date > DATE '{as_of}'",
+     source_fix: "Finance: restrict BC order date to <= today for non-blanket orders", runbook: bad-values}
+  - {id: dq_company_duplicates_in_erp, dataset: gold.dim_company, dimension: duplication, severity: error, domain: company, op: max, threshold: 0,
+     sql: "SELECT count(*) FROM gold.dim_company WHERE duplicate_in_erp",
+     source_fix: "Finance: merge duplicate BC customer cards (BC merge tool) and enable duplicate detection on create", runbook: duplicate-customers}
+  - {id: dq_stg_pk_unique_orders, dataset: bc.sales_orders, dimension: duplication, severity: critical, domain: order, op: max, threshold: 0,
+     sql: "SELECT count(*) - count(DISTINCT no) FROM silver.stg_bc__sales_orders", source_fix: "Platform: investigate dedupe logic", runbook: pipeline-failure}
+  - {id: dq_orphan_order_customer, dataset: bc.sales_orders, dimension: consistency, severity: error, domain: order, op: max, threshold: 0,
+     sql: "SELECT count(*) FROM silver.stg_bc__sales_orders o WHERE NOT EXISTS (SELECT 1 FROM silver.stg_bc__customers c WHERE c.no = o.customer_no)",
+     source_fix: "Finance: restore or re-map the missing customer cards; enforce FK at order entry", runbook: bad-values}
+  - {id: dq_invoice_matches_lines, dataset: gold.fact_revenue, dimension: consistency, severity: critical, domain: revenue, op: max, threshold: 0.01,
+     sql: "SELECT count(*) FILTER (WHERE abs(lines_variance) > 0.01) * 1.0 / count(*) FROM gold.fact_revenue",
+     source_fix: "Finance: require approval + reason code on invoice price overrides in BC", runbook: revenue-mismatch}
+  - {id: dq_web_inventory_in_sync, dataset: gold.fact_inventory_snapshot, dimension: consistency, severity: error, domain: inventory, op: max, threshold: 0.02,
+     sql: "SELECT coalesce(count(DISTINCT product_key) FILTER (WHERE abs(web_variance) > 0) * 1.0 / nullif(count(DISTINCT product_key), 0), 0) FROM gold.fact_inventory_snapshot",
+     source_fix: "Ecommerce: move inventory sync from nightly CSV to event-driven push from BC", runbook: inventory-drift}
+  - {id: dq_web_orders_reach_erp, dataset: bg.orders, dimension: consistency, severity: critical, domain: order, op: max, threshold: 0.01,
+     sql: "SELECT (SELECT count(*) FROM gold.exc_web_orders_missing_in_erp) * 1.0 / nullif((SELECT count(*) FROM silver.stg_bg__orders), 0)",
+     source_fix: "Ecommerce + vendor: add retry/dead-letter to the BigCommerce->BC order connector", runbook: pipeline-failure}
+  - {id: dq_fresh_ad_spend, dataset: mkt.ad_spend, dimension: freshness, severity: error, domain: marketing, op: max, threshold: 30,
+     sql: "SELECT date_diff('hour', max(_source_updated_at), TIMESTAMP '{as_of} 23:59:59') FROM silver.stg_mkt__ad_spend",
+     source_fix: "Marketing: re-authorise the ad platform API token; confirm connector schedule", runbook: stale-feed}
+  - {id: dq_fresh_sales_orders, dataset: bc.sales_orders, dimension: freshness, severity: critical, domain: order, op: max, threshold: 120,
+     sql: "SELECT date_diff('hour', max(_source_updated_at), TIMESTAMP '{as_of} 23:59:59') FROM silver.stg_bc__sales_orders",
+     source_fix: "IT: check BC API job queue", runbook: stale-feed}
+  - {id: dq_fresh_production, dataset: mes.work_orders, dimension: freshness, severity: error, domain: production, op: max, threshold: 240,
+     sql: "SELECT date_diff('hour', max(_source_updated_at), TIMESTAMP '{as_of} 23:59:59') FROM silver.stg_mes__work_orders",
+     source_fix: "Operations: check MES export job on the plant server", runbook: stale-feed}
+  - {id: dq_scrap_rate_plausible, dataset: gold.fact_production, dimension: accuracy, severity: warning, domain: production, op: max, threshold: 0.10,
+     sql: "SELECT coalesce(avg(scrap_rate), 0) FROM gold.fact_production", source_fix: "Operations: review machine setup if sustained", runbook: bad-values}
+  - {id: dq_golden_company_coverage, dataset: gold.dim_company, dimension: completeness, severity: warning, domain: company, op: min, threshold: 0.8,
+     sql: "SELECT count(*) FILTER (WHERE account_owner IS NOT NULL) * 1.0 / count(*) FROM gold.dim_company",
+     source_fix: "Sales: assign an account owner in HubSpot to every active company", runbook: duplicate-customers}

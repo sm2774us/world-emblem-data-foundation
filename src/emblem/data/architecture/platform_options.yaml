@@ -1,0 +1,21 @@
+# Weighted decision matrix. Scores 1-5 are the author's judgement from the JD's stated environment (Microsoft-centric, BC, Power BI, AI roadmap).
+# They are inputs to a discussion, not facts: change a weight and the ranking and sensitivity analysis recompute.
+criteria:
+  existing_microsoft_fit: {weight: 0.20, why: "Business Central, Power BI and Azure are already in the estate"}
+  security_governance:    {weight: 0.20, why: "RBAC, encryption, audit, lineage, PII controls are explicit JD requirements"}
+  ai_readiness:           {weight: 0.15, why: "Agents, RAG and vector search are on the roadmap"}
+  total_cost:             {weight: 0.15, why: "Mid-size manufacturer: avoid platform sprawl and idle spend"}
+  maintainability:        {weight: 0.15, why: "Small team: managed services, fewer moving parts"}
+  erp_bi_integration:     {weight: 0.10, why: "Native BC connectors and Power BI semantic models"}
+  portability:            {weight: 0.05, why: "Open formats (Delta/Parquet) and standard SQL/Spark limit lock-in"}
+options:
+  microsoft_fabric:  {label: Microsoft Fabric, scores: {existing_microsoft_fit: 5, security_governance: 4, ai_readiness: 4, total_cost: 4, maintainability: 4, erp_bi_integration: 5, portability: 3}}
+  databricks:        {label: Databricks, scores: {existing_microsoft_fit: 4, security_governance: 5, ai_readiness: 5, total_cost: 3, maintainability: 3, erp_bi_integration: 3, portability: 5}}
+  snowflake:         {label: Snowflake, scores: {existing_microsoft_fit: 3, security_governance: 5, ai_readiness: 4, total_cost: 3, maintainability: 4, erp_bi_integration: 3, portability: 3}}
+  bigquery:          {label: Google BigQuery, scores: {existing_microsoft_fit: 2, security_governance: 4, ai_readiness: 4, total_cost: 4, maintainability: 4, erp_bi_integration: 2, portability: 3}}
+  azure_synapse:     {label: Azure Synapse, scores: {existing_microsoft_fit: 4, security_governance: 4, ai_readiness: 3, total_cost: 3, maintainability: 2, erp_bi_integration: 4, portability: 2}}
+  redshift:          {label: Amazon Redshift, scores: {existing_microsoft_fit: 2, security_governance: 4, ai_readiness: 3, total_cost: 3, maintainability: 3, erp_bi_integration: 2, portability: 2}}
+integration_tools:
+  orchestration: {choice: Apache Airflow, alternatives: [Dagster, Azure Data Factory], why: "JD names Airflow; code-first, testable DAGs; ADF kept only for BC bulk extract if licensing favours it"}
+  transformation: {choice: SQL models (dbt-style) on Spark/SQL engine, alternatives: [dbt Core, SQLMesh], why: "Versioned, tested, lineage-aware; dbt project included for the Fabric/Databricks target"}
+  ingestion: {choice: Custom Python connectors + webhooks, alternatives: [Fivetran, Airbyte], why: "Own idempotency, retries and contracts; buy connectors where vendor SLAs beat build cost"}

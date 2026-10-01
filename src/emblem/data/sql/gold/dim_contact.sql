@@ -1,0 +1,13 @@
+-- Common model: customer/contact (person-level, PII). Key = hash of normalised email (falls back to source id).
+SELECT * EXCLUDE (rn) FROM (
+  SELECT coalesce('ct_' || substr(md5(lower(email)), 1, 12), 'ct_' || substr(md5(source || ':' || id), 1, 12)) AS contact_key,
+         source, id AS source_id, email, first_name, last_name, phone, company_key,
+         row_number() OVER (PARTITION BY coalesce(lower(email), source || id) ORDER BY source) AS rn
+  FROM (
+    SELECT 'hs' AS source, ct.id, ct.email, ct.first_name, ct.last_name, ct.phone, x.company_key
+    FROM {{ ref('stg_hs__contacts') }} ct LEFT JOIN {{ ref('xref_company') }} x ON x.source = 'hs' AND x.source_id = ct.company_id
+    UNION ALL
+    SELECT 'bg', b.id, b.email, b.first_name, b.last_name, b.phone, x.company_key
+    FROM {{ ref('stg_bg__customers') }} b LEFT JOIN {{ ref('xref_company') }} x ON x.source = 'bg' AND x.source_id = b.id
+  )
+) WHERE rn = 1

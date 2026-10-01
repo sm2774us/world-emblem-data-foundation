@@ -1,0 +1,37 @@
+# Gitleaks configuration (https://github.com/gitleaks/gitleaks). Picked up automatically from the repo root.
+# Strategy: use the full default ruleset, add project-specific rules, and allow-list ONLY clearly synthetic fixtures.
+title = "world-emblem-data-foundation gitleaks config"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "emblem-secret-assignment"
+description = "Hardcoded EMBLEM_* secret/key/token assigned a literal value"
+regex = '''(?i)EMBLEM_(MASTER_SECRET|AUTH_SECRET|WEBHOOK_SECRET|ALERT_WEBHOOK)\s*[:=]\s*["']?[A-Za-z0-9/+_\-]{12,}["']?'''
+tags = ["emblem", "secret"]
+
+[[rules]]
+id = "azure-storage-account-key"
+description = "Azure storage account key or connection string"
+regex = '''(?i)(AccountKey|SharedAccessKey)\s*=\s*[A-Za-z0-9+/=]{20,}'''
+tags = ["azure"]
+
+[[rules]]
+id = "private-key-block"
+description = "PEM private key"
+regex = '''-----BEGIN (RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----'''
+tags = ["key"]
+
+[allowlist]
+description = "Synthetic, non-secret content"
+paths = [
+  '''uv\.lock$''',
+  '''docs/powerbi/model\.bim$''',
+  '''build/''',
+  '''\.env\.example$''',
+]
+regexes = [
+  '''EMBLEM_[A-Z_]+=\s*(change-me|<set-in-secret-manager>|)$''',
+  '''(?i)99-\d{7}''',
+]

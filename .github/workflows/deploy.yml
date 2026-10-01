@@ -1,0 +1,36 @@
+name: Deploy
+# Manual only. Authenticates to Azure with short-lived OIDC federated credentials; no cloud keys are stored in GitHub.
+on:
+  workflow_dispatch:
+    inputs:
+      environment: { description: Target environment, type: choice, options: [dev, prod], required: true }
+      version: { description: "Image tag (e.g. 1.0.0)", type: string, required: true }
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # Skipped until the deployment variables exist (see WALKTHROUGH, Part 8).
+    if: vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}   # prod environment holds required reviewers
+    steps:
+      - uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5 # v2.3.0
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Roll the container app to the pinned image tag
+        run: |
+          az containerapp update --name "${{ vars.CONTAINER_APP }}-${{ inputs.environment }}" --resource-group "${{ vars.RESOURCE_GROUP }}-${{ inputs.environment }}" \
+            --image "ghcr.io/${{ github.repository }}:${{ inputs.version }}"
+      - name: Smoke test (auto-fail on bad release)
+        run: |
+          fqdn=$(az containerapp show --name "${{ vars.CONTAINER_APP }}-${{ inputs.environment }}" --resource-group "${{ vars.RESOURCE_GROUP }}-${{ inputs.environment }}" --query properties.configuration.ingress.fqdn -o tsv)
+          for i in $(seq 1 30); do curl -fsS "https://$fqdn/readyz" && exit 0 || sleep 5; done; exit 1

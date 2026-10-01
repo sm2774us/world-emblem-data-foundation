@@ -1,0 +1,4 @@
+-- Governed reporting model: monthly revenue (the one definition Finance signs off).
+SELECT posting_month, count(*) AS invoices, count(DISTINCT order_no) AS orders, sum(amount_usd) AS revenue_usd,
+       sum(amount_usd) / count(*) AS avg_invoice_usd
+FROM {{ ref('fact_revenue') }} GROUP BY posting_month ORDER BY posting_month

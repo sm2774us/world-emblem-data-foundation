@@ -1,0 +1,35 @@
+# ASSUMED current state, modelled from the job description (World Emblem's real estate is unknown until Day 1-30 discovery).
+# Every flag here is a hypothesis to be confirmed in interviews; the audit engine turns hypotheses into a scored baseline.
+systems:
+  - {id: business_central, name: Microsoft Dynamics 365 Business Central, type: erp, owner: Finance, admin: Applications, criticality: critical, domains: [company, product, order, revenue, inventory, location], store: azure_sql_saas, access: odata_api, classification: restricted}
+  - {id: hubspot, name: HubSpot CRM, type: crm, owner: Sales, admin: Sales Ops, criticality: high, domains: [company, contact, pipeline], store: saas, access: rest_api, classification: pii}
+  - {id: bigcommerce, name: BigCommerce, type: ecommerce, owner: Ecommerce, admin: Ecommerce, criticality: critical, domains: [order, product, contact, inventory], store: saas, access: rest_api_webhooks, classification: pii}
+  - {id: optimizely, name: Optimizely, type: web_cms, owner: Marketing, admin: Marketing, criticality: medium, domains: [pipeline, product], store: saas, access: rest_api, classification: pii}
+  - {id: marketing_platforms, name: Google Ads / Meta Ads, type: marketing, owner: Marketing, admin: Marketing, criticality: medium, domains: [marketing], store: saas, access: rest_api, classification: internal}
+  - {id: production_mes, name: Production systems (embroidery MES), type: mes, owner: Operations, admin: Infrastructure, criticality: high, domains: [production, inventory], store: on_prem_sql_server, access: direct_db, classification: confidential}
+  - {id: internal_servers, name: Internal file/SQL servers, type: infra, owner: null, admin: Infrastructure, criticality: medium, domains: [revenue, order], store: on_prem_sql_server, access: direct_db, classification: confidential}
+  - {id: power_bi, name: Power BI (departmental workspaces), type: bi, owner: null, admin: Finance, criticality: high, domains: [revenue, order, inventory], store: saas, access: direct_db, classification: confidential}
+integrations:
+  - {id: INT-01, name: BigCommerce orders to BC, from: bigcommerce, to: business_central, domains: [order], mechanism: vendor_connector, schedule: every 15 min, owner: Ecommerce, documented: false, retries: false, idempotent: false, monitored: false, schema_coupled: true, secret_store: plaintext_config, vendor: Vendor A}
+  - {id: INT-02, name: BC inventory to BigCommerce, from: business_central, to: bigcommerce, domains: [inventory], mechanism: csv_file_drop, schedule: nightly, owner: Ecommerce, documented: false, retries: false, idempotent: true, monitored: false, schema_coupled: true, secret_store: shared_service_account, vendor: null}
+  - {id: INT-03, name: HubSpot companies and BC customers sync, from: hubspot, to: business_central, domains: [company], mechanism: vendor_connector, schedule: hourly, owner: Sales, documented: true, retries: true, idempotent: false, monitored: false, schema_coupled: true, secret_store: vault, vendor: Vendor B}
+  - {id: INT-04, name: BC customers to HubSpot, from: business_central, to: hubspot, domains: [company], mechanism: zapier, schedule: event, owner: Sales, documented: false, retries: false, idempotent: false, monitored: false, schema_coupled: false, secret_store: personal_token, vendor: null}
+  - {id: INT-05, name: Optimizely quotes to HubSpot deals, from: optimizely, to: hubspot, domains: [pipeline], mechanism: webhook, schedule: event, owner: Marketing, documented: false, retries: false, idempotent: false, monitored: false, schema_coupled: true, secret_store: vault, vendor: Vendor A}
+  - {id: INT-06, name: MES work orders to BC, from: production_mes, to: business_central, domains: [production, inventory], mechanism: db_link, schedule: nightly, owner: null, documented: false, retries: false, idempotent: false, monitored: false, schema_coupled: true, secret_store: shared_service_account, vendor: null}
+  - {id: INT-07, name: Ad spend to Power BI, from: marketing_platforms, to: power_bi, domains: [marketing], mechanism: manual_export, schedule: weekly, owner: Marketing, documented: false, retries: false, idempotent: false, monitored: false, schema_coupled: false, secret_store: personal_token, vendor: null}
+  - {id: INT-08, name: BC to Power BI (direct query on production), from: business_central, to: power_bi, domains: [revenue, order, inventory], mechanism: direct_prod_query, schedule: on_demand, owner: Finance, documented: false, retries: false, idempotent: true, monitored: false, schema_coupled: true, secret_store: shared_service_account, vendor: null}
+jobs:
+  - {id: JOB-01, name: Nightly inventory CSV export, system: business_central, schedule: "0 2 * * *", owner: Ecommerce, alerting: false}
+  - {id: JOB-02, name: MES nightly sync, system: production_mes, schedule: "0 1 * * *", owner: null, alerting: false}
+  - {id: JOB-03, name: HubSpot company dedupe workflow, system: hubspot, schedule: weekly, owner: Sales, alerting: false}
+  - {id: JOB-04, name: Month-end revenue report refresh, system: power_bi, schedule: monthly, owner: Finance, alerting: true}
+reports:
+  - {id: RPT-01, name: Daily sales dashboard, tool: power_bi, owner: Sales, sources: [business_central, hubspot], manual_steps: true, downstream: [Sales leadership]}
+  - {id: RPT-02, name: Month-end revenue pack, tool: excel, owner: Finance, sources: [business_central, bigcommerce], manual_steps: true, downstream: [CFO, Board]}
+  - {id: RPT-03, name: Inventory vs web availability, tool: power_bi, owner: null, sources: [business_central, bigcommerce], manual_steps: true, downstream: [Operations, Ecommerce]}
+  - {id: RPT-04, name: Marketing ROI, tool: excel, owner: Marketing, sources: [marketing_platforms, bigcommerce], manual_steps: true, downstream: [Marketing, CEO]}
+  - {id: RPT-05, name: Production yield and scrap, tool: power_bi, owner: Operations, sources: [production_mes], manual_steps: false, downstream: [Plant managers]}
+downstream_consumers:
+  - {id: DS-01, name: Director of AI agents (planned), needs: [company, product, inventory], access_today: direct_db_request}
+  - {id: DS-02, name: Internal MicroSaaS apps (planned), needs: [order, product, inventory], access_today: direct_db_request}
+  - {id: DS-03, name: Finance forecasting, needs: [revenue, order], access_today: excel_extracts}

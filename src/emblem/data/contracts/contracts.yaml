@@ -1,0 +1,251 @@
+# Data contracts: the single source of truth for bronze->silver typing, schema-drift handling,
+# classification, freshness SLAs and retention. Staging SQL is GENERATED from this file.
+version: 1
+datasets:
+  - id: bc.customers
+    source: business_central
+    owner: Finance
+    pk: "no"
+    updated_at: modified_at
+    freshness_hours: 30
+    retention_days: 2555
+    columns:
+      "no": {type: VARCHAR, required: true}
+      name: {type: VARCHAR, required: true}
+      email: {type: VARCHAR, class: pii}
+      phone: {type: VARCHAR, class: pii}
+      city: {type: VARCHAR}
+      state: {type: VARCHAR}
+      country: {type: VARCHAR}
+      currency: {type: VARCHAR}
+      credit_limit: {type: DOUBLE, class: confidential}
+      tax_id: {type: VARCHAR, class: restricted}
+      modified_at: {type: TIMESTAMP, required: true}
+  - id: bc.items
+    source: business_central
+    owner: Operations
+    pk: "no"
+    updated_at: modified_at
+    freshness_hours: 30
+    retention_days: 2555
+    columns:
+      "no": {type: VARCHAR, required: true}
+      description: {type: VARCHAR}
+      family: {type: VARCHAR}
+      unit_price: {type: DOUBLE, required: true}
+      unit_cost: {type: DOUBLE, class: confidential}
+      uom: {type: VARCHAR}
+      modified_at: {type: TIMESTAMP, required: true}
+  - id: bc.sales_orders
+    source: business_central
+    owner: Finance
+    pk: "no"
+    updated_at: modified_at
+    freshness_hours: 30
+    retention_days: 2555
+    columns:
+      "no": {type: VARCHAR, required: true}
+      customer_no: {type: VARCHAR, required: true}
+      order_date: {type: DATE, required: true}
+      status: {type: VARCHAR}
+      currency: {type: VARCHAR}
+      external_doc_no: {type: VARCHAR}
+      modified_at: {type: TIMESTAMP, required: true}
+  - id: bc.sales_lines
+    source: business_central
+    owner: Finance
+    pk: line_id
+    updated_at: modified_at
+    freshness_hours: 30
+    retention_days: 2555
+    columns:
+      line_id: {type: VARCHAR, required: true}
+      order_no: {type: VARCHAR, required: true}
+      item_no: {type: VARCHAR, required: true}
+      quantity: {type: DOUBLE, required: true}
+      unit_price: {type: DOUBLE}
+      line_amount: {type: DOUBLE}
+      modified_at: {type: TIMESTAMP, required: true}
+  - id: bc.invoices
+    source: business_central
+    owner: Finance
+    pk: invoice_no
+    updated_at: modified_at
+    freshness_hours: 30
+    retention_days: 2555
+    columns:
+      invoice_no: {type: VARCHAR, required: true}
+      order_no: {type: VARCHAR, required: true}
+      posting_date: {type: DATE, required: true}
+      amount: {type: DOUBLE, required: true}
+      currency: {type: VARCHAR}
+      modified_at: {type: TIMESTAMP, required: true}
+  - id: bc.inventory
+    source: business_central
+    owner: Operations
+    pk: inv_id
+    updated_at: modified_at
+    freshness_hours: 30
+    retention_days: 1095
+    columns:
+      inv_id: {type: VARCHAR, required: true}
+      item_no: {type: VARCHAR, required: true}
+      location_code: {type: VARCHAR, required: true}
+      qty_on_hand: {type: DOUBLE}
+      modified_at: {type: TIMESTAMP, required: true}
+  - id: hs.companies
+    source: hubspot
+    owner: Sales
+    pk: id
+    updated_at: modified_at
+    freshness_hours: 30
+    retention_days: 1825
+    columns:
+      id: {type: VARCHAR, required: true}
+      name: {type: VARCHAR, required: true}
+      domain: {type: VARCHAR}
+      owner_email: {type: VARCHAR, class: internal}
+      lifecycle_stage: {type: VARCHAR}
+      country: {type: VARCHAR}
+      modified_at: {type: TIMESTAMP, required: true}
+  - id: hs.contacts
+    source: hubspot
+    owner: Sales
+    pk: id
+    updated_at: modified_at
+    freshness_hours: 30
+    retention_days: 1095
+    columns:
+      id: {type: VARCHAR, required: true}
+      email: {type: VARCHAR, class: pii}
+      first_name: {type: VARCHAR, class: pii}
+      last_name: {type: VARCHAR, class: pii}
+      phone: {type: VARCHAR, class: pii}
+      company_id: {type: VARCHAR}
+      modified_at: {type: TIMESTAMP, required: true}
+  - id: hs.deals
+    source: hubspot
+    owner: Sales
+    pk: id
+    updated_at: modified_at
+    freshness_hours: 30
+    retention_days: 1825
+    columns:
+      id: {type: VARCHAR, required: true}
+      company_id: {type: VARCHAR}
+      amount: {type: DOUBLE}
+      stage: {type: VARCHAR}
+      close_date: {type: DATE}
+      modified_at: {type: TIMESTAMP, required: true}
+  - id: bg.customers
+    source: bigcommerce
+    owner: Ecommerce
+    pk: id
+    updated_at: modified_at
+    freshness_hours: 6
+    retention_days: 1095
+    columns:
+      id: {type: VARCHAR, required: true}
+      email: {type: VARCHAR, class: pii}
+      first_name: {type: VARCHAR, class: pii}
+      last_name: {type: VARCHAR, class: pii}
+      company: {type: VARCHAR}
+      phone: {type: VARCHAR, class: pii}
+      modified_at: {type: TIMESTAMP, required: true}
+  - id: bg.products
+    source: bigcommerce
+    owner: Ecommerce
+    pk: id
+    updated_at: modified_at
+    freshness_hours: 6
+    retention_days: 1095
+    columns:
+      id: {type: VARCHAR, required: true}
+      sku: {type: VARCHAR, required: true}
+      name: {type: VARCHAR}
+      price: {type: DOUBLE}
+      inventory_level: {type: DOUBLE}
+      is_visible: {type: BOOLEAN}
+      modified_at: {type: TIMESTAMP, required: true}
+  - id: bg.orders
+    source: bigcommerce
+    owner: Ecommerce
+    pk: id
+    updated_at: modified_at
+    freshness_hours: 6
+    retention_days: 1095
+    columns:
+      id: {type: VARCHAR, required: true}
+      customer_id: {type: VARCHAR}
+      date_created: {type: TIMESTAMP, required: true}
+      status: {type: VARCHAR}
+      total_inc_tax: {type: DOUBLE, required: true, aliases: [total]}
+      currency: {type: VARCHAR}
+      utm_campaign: {type: VARCHAR}
+      modified_at: {type: TIMESTAMP, required: true}
+  - id: bg.order_items
+    source: bigcommerce
+    owner: Ecommerce
+    pk: id
+    updated_at: modified_at
+    freshness_hours: 6
+    retention_days: 1095
+    columns:
+      id: {type: VARCHAR, required: true}
+      order_id: {type: VARCHAR, required: true}
+      sku: {type: VARCHAR, required: true}
+      quantity: {type: DOUBLE}
+      price_inc_tax: {type: DOUBLE}
+      modified_at: {type: TIMESTAMP, required: true}
+  - id: opti.quotes
+    source: optimizely
+    owner: Sales
+    pk: id
+    updated_at: modified_at
+    freshness_hours: 30
+    retention_days: 730
+    columns:
+      id: {type: VARCHAR, required: true}
+      contact_email: {type: VARCHAR, class: pii}
+      company_name: {type: VARCHAR}
+      sku: {type: VARCHAR}
+      quantity: {type: DOUBLE}
+      quote_amount: {type: DOUBLE}
+      status: {type: VARCHAR}
+      modified_at: {type: TIMESTAMP, required: true}
+  - id: mkt.ad_spend
+    source: marketing_platforms
+    owner: Marketing
+    pk: id
+    updated_at: modified_at
+    freshness_hours: 30
+    retention_days: 1095
+    columns:
+      id: {type: VARCHAR, required: true}
+      spend_date: {type: DATE, required: true}
+      platform: {type: VARCHAR}
+      campaign: {type: VARCHAR}
+      spend: {type: DOUBLE}
+      clicks: {type: INTEGER}
+      impressions: {type: INTEGER}
+      modified_at: {type: TIMESTAMP, required: true}
+  - id: mes.work_orders
+    source: production_mes
+    owner: Operations
+    pk: id
+    updated_at: modified_at
+    freshness_hours: 12
+    retention_days: 1095
+    columns:
+      id: {type: VARCHAR, required: true}
+      bc_order_no: {type: VARCHAR}
+      item_no: {type: VARCHAR}
+      location_code: {type: VARCHAR}
+      machine: {type: VARCHAR}
+      qty_planned: {type: DOUBLE}
+      qty_good: {type: DOUBLE}
+      qty_scrap: {type: DOUBLE}
+      status: {type: VARCHAR}
+      started_at: {type: TIMESTAMP}
+      finished_at: {type: TIMESTAMP}
+      modified_at: {type: TIMESTAMP, required: true}

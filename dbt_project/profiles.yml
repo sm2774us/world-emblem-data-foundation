@@ -1,0 +1,8 @@
+world_emblem:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "{{ env_var('EMBLEM_DB', '../build/emblem.duckdb') }}"
+      schema: gold_dbt
+      threads: 2

@@ -1,0 +1,185 @@
+name: PR Verification
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, edited]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  UV_VERSION: "0.12.21"       # pinned; supports CPython 3.14
+  PYTHON_VERSION: "3.14"       # latest stable CPython
+  UV_FROZEN: "1"               # CI never re-resolves: uv.lock is the contract
+
+jobs:
+  guard:
+    name: guard (PR title, repo hygiene)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: { contents: read, pull-requests: read }
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Dependabot and Renovate must not exist (no bot branches or PRs)
+        run: |
+          for f in .github/dependabot.yml .github/dependabot.yaml renovate.json .github/renovate.json; do
+            if [ -e "$f" ]; then echo "::error file=$f::Automated dependency PRs are disabled by policy"; exit 1; fi
+          done
+      - name: PR title must be a Conventional Commit (it becomes the squash commit and drives releases)
+        if: github.event_name == 'pull_request'
+        uses: amannn/action-semantic-pull-request@0723387faaf9b38adef4775cd42cfd5155ed6017 # v5.5.3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  secrets:
+    name: secrets (gitleaks, full history)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with: { fetch-depth: 0 }
+      - name: Install gitleaks (pinned, checksum verified)
+        run: |
+          VER=8.28.0
+          curl -fsSL -o gl.tgz "https://github.com/gitleaks/gitleaks/releases/download/v${VER}/gitleaks_${VER}_linux_x64.tar.gz"
+          curl -fsSL -o gl.sum "https://github.com/gitleaks/gitleaks/releases/download/v${VER}/gitleaks_${VER}_checksums.txt"
+          grep "gitleaks_${VER}_linux_x64.tar.gz" gl.sum | sha256sum -c -
+          tar -xzf gl.tgz gitleaks && sudo mv gitleaks /usr/local/bin/
+      - name: Scan working tree and git history with .gitleaks.toml
+        run: gitleaks detect --source . --config .gitleaks.toml --redact --verbose --no-banner
+
+  verify:
+    name: verify (format, lint, types, unit, integration, coverage)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv run ruff format --check src tests dags tools
+      - run: uv run ruff check src tests dags tools
+      - run: uv run mypy
+      - name: Unit + integration tests with coverage gate (>= 85%)
+        run: uv run pytest -m "not e2e and not spark and not airflow" --cov --cov-report=xml --cov-report=term
+      - name: Generated docs and dbt models must be in sync with code
+        run: |
+          python tools/sync_dbt.py --check
+          uv run emblem docs
+          git diff --exit-code -- docs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with: { name: coverage-xml, path: coverage.xml, retention-days: 7 }
+
+  e2e:
+    name: e2e (real CLI + real HTTP server)
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
+        with: { version: "${{ env.UV_VERSION }}", python-version: "${{ env.PYTHON_VERSION }}", enable-cache: true }
+      - run: uv sync --locked
+      - run: uv run pytest -m e2e --no-cov
+
+  spark:
+    name: spark (Spark vs DuckDB parity)
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with: { distribution: temurin, java-version: "21" }
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
+        with: { version: "${{ env.UV_VERSION }}", python-version: "${{ env.PYTHON_VERSION }}", enable-cache: true }
+      - run: uv sync --locked --group spark
+      - run: uv run pytest -m spark --no-cov
+
+  airflow:
+    name: airflow (DAG integrity)
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
+        with: { version: "${{ env.UV_VERSION }}", python-version: "${{ env.PYTHON_VERSION }}", enable-cache: true }
+      - run: uv sync --locked --group airflow
+      - run: uv run pytest -m airflow --no-cov
+
+  dbt:
+    name: dbt (build + tests on the same silver layer)
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
+        with: { version: "${{ env.UV_VERSION }}", python-version: "${{ env.PYTHON_VERSION }}", enable-cache: true }
+      - run: uv sync --locked --group dbt
+      - run: uv run emblem demo
+      - run: uv run dbt build --project-dir dbt_project --profiles-dir dbt_project
+        env: { EMBLEM_DB: "../build/emblem.duckdb" }
+
+  docker:
+    name: docker (build, hardened smoke)
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
+      - uses: docker/build-push-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4 # v6.15.0
+        with:
+          context: .
+          file: infra/docker/Dockerfile
+          load: true
+          tags: emblem:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Runs read-only, no capabilities, non-root; refuses unsafe production config
+        run: |
+          test -n "$(docker inspect -f '{{.Config.User}}' emblem:ci)"
+          if docker run --rm -e EMBLEM_ENV=prod emblem:ci serve; then echo "must refuse to start without secrets"; exit 1; fi
+          docker run -d --name api --read-only --tmpfs /tmp --tmpfs /app/build --cap-drop ALL --security-opt no-new-privileges -p 8000:8000 \
+            -e EMBLEM_ENV=dev emblem:ci serve --host 0.0.0.0
+          for i in $(seq 1 40); do curl -fsS localhost:8000/healthz >/dev/null && break || sleep 1; done
+          curl -fsS localhost:8000/readyz
+
+  terraform:
+    name: terraform (fmt, validate)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with: { terraform_version: "~1.9", terraform_wrapper: false }
+      - run: terraform fmt -check -recursive infra/terraform
+      - name: Validate every environment (no backend, no credentials)
+        run: |
+          for d in infra/terraform/envs/*/; do
+            echo "== $d"; terraform -chdir="$d" init -backend=false -input=false >/dev/null; terraform -chdir="$d" validate
+          done
+
+  # The ONLY required status check in the ruleset.
+  ci-ok:
+    name: ci-ok (required check)
+    if: always()
+    needs: [guard, secrets, verify, e2e, spark, airflow, dbt, docker, terraform]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Every job must have succeeded
+        env: { NEEDS: "${{ toJSON(needs) }}" }
+        run: |
+          echo "$NEEDS"
+          if echo "$NEEDS" | grep -Eq '"result": "(failure|cancelled|skipped)"'; then exit 1; fi

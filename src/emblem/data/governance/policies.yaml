@@ -1,0 +1,24 @@
+# Governance-as-code: roles, dataset entitlements, masking and retention. Reviewed via CODEOWNERS.
+classification_rank: {public: 0, internal: 1, confidential: 2, pii: 3, restricted: 4}
+roles:
+  admin:            {max_class: restricted,   datasets: ["*"], unmask: [pii, restricted]}
+  data_engineer:    {max_class: pii,          datasets: ["*"], unmask: []}
+  finance_analyst:  {max_class: confidential, datasets: [fact_revenue, fact_order_line, mart_revenue_monthly, mart_company_360, dim_company, dim_product, forecast_revenue, fact_inventory_snapshot], unmask: []}
+  sales_rep:        {max_class: pii,          datasets: [dim_company, dim_contact, mart_company_360, dim_product], unmask: [pii]}
+  marketing_analyst: {max_class: internal,    datasets: [fact_marketing_spend, mart_marketing_roi, dim_product, mart_revenue_monthly], unmask: []}
+  ai_agent:         {max_class: internal,     datasets: [dim_product, mart_company_360, fact_inventory_snapshot], unmask: []}
+  auditor:          {max_class: internal,     datasets: [], unmask: []}
+columns:   # gold columns above 'internal' (everything else defaults to internal)
+  dim_contact:   {email: pii, first_name: pii, last_name: pii, phone: pii}
+  dim_company:   {tax_id: restricted, credit_limit: confidential, account_owner: internal}
+  dim_product:   {std_cost: confidential}
+masking:   # strategy per classification when the caller may see the dataset but not unmask the column
+  pii: hash
+  restricted: redact
+  confidential: bucket
+retention:   # days; enforced by security/retention.py (dry-run by default)
+  bronze_payload_days: 1095
+  audit_log_days: 2555
+  ai_usage_days: 365
+  events_inbox_days: 30
+  contact_pii_anonymise_days: 1095

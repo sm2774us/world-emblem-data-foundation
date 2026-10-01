@@ -1,0 +1,8 @@
+.git
+.venv
+build
+.github
+tests
+docs
+*.duckdb
+__pycache__

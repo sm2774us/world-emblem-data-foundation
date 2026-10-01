@@ -1,0 +1,9 @@
+# Business definitions. Owners define meaning; Data Platform enforces it in models, tests and the semantic layer.
+terms:
+  - {term: Revenue, owner: Finance, definition: "Sum of posted sales invoices in Business Central converted to USD at ref.fx_rates. Excludes open and cancelled orders and web 'order totals'.", model: fact_revenue}
+  - {term: Order, owner: Finance, definition: "A Business Central sales order. A BigCommerce order only counts once it exists in Business Central (external_doc_no).", model: fact_order_line}
+  - {term: Active customer, owner: Sales, definition: "A golden company with at least one order in the last 12 months. Duplicate customer cards count once.", model: mart_company_360}
+  - {term: Inventory on hand, owner: Operations, definition: "Business Central quantity on hand per item and location. Web stock level is availability-to-sell, not on-hand.", model: fact_inventory_snapshot}
+  - {term: Yield, owner: Operations, definition: "qty_good divided by qty_planned for a production work order.", model: fact_production}
+  - {term: ROAS, owner: Marketing, definition: "Web order revenue attributed by UTM campaign divided by ad spend for the same campaign.", model: mart_marketing_roi}
+  - {term: Golden company, owner: Finance, definition: "The resolved account that merges ERP, CRM, web and quote records. Identified by company_key.", model: dim_company}

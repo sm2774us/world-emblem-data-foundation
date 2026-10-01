@@ -1,0 +1,13 @@
+# System-of-record (SoR) matrix. One authoritative system per domain; field-level overrides where a different system is better placed.
+# Survivorship in gold SQL and the validator in architecture/sor.py both read this file.
+domains:
+  company:    {owner: Finance,    authority: business_central, identifier: company_key, fields: {owner_and_lifecycle: hubspot, web_account: bigcommerce, contact_channel: hubspot}}
+  contact:    {owner: Sales,      authority: hubspot,         identifier: contact_key, fields: {web_login: bigcommerce}}
+  product:    {owner: Operations, authority: business_central, identifier: product_key, fields: {web_description: bigcommerce, web_visibility: bigcommerce}}
+  order:      {owner: Finance,    authority: business_central, identifier: order_no, fields: {web_cart_and_utm: bigcommerce, quote_request: optimizely}}
+  revenue:    {owner: Finance,    authority: business_central, identifier: revenue_key, fields: {}}
+  inventory:  {owner: Operations, authority: business_central, identifier: inventory_key, fields: {web_available_to_sell: bigcommerce}}
+  location:   {owner: Operations, authority: business_central, identifier: location_key, fields: {}}
+  production: {owner: Operations, authority: production_mes,  identifier: work_order_key, fields: {}}
+  marketing:  {owner: Marketing,  authority: marketing_platforms, identifier: spend_key, fields: {attribution_utm: bigcommerce}}
+  pipeline:   {owner: Sales,      authority: hubspot,         identifier: deal_id, fields: {quote_request: optimizely}}

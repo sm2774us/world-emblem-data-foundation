@@ -1,0 +1,5 @@
+#!/bin/sh
+# Enforce Conventional Commits (drives SemVer + changelog in release.yml).
+msg=$(head -n1 "$1")
+echo "$msg" | grep -Eq '^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9._-]+\))?!?: .+' || {
+  echo "Commit message must follow Conventional Commits, e.g. 'feat(api): add lineage endpoint'" >&2; exit 1; }

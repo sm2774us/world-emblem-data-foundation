@@ -1,0 +1,67 @@
+version: 2
+models:
+- name: dim_company
+  columns:
+  - name: company_key
+    data_tests:
+    - unique
+    - not_null
+  - name: company_name
+    data_tests:
+    - not_null
+- name: dim_contact
+  columns:
+  - name: contact_key
+    data_tests:
+    - unique
+    - not_null
+- name: dim_product
+  columns:
+  - name: product_key
+    data_tests:
+    - unique
+    - not_null
+- name: dim_location
+  columns:
+  - name: location_key
+    data_tests:
+    - unique
+    - not_null
+- name: fact_order_line
+  columns:
+  - name: order_line_key
+    data_tests:
+    - unique
+    - not_null
+  - name: product_key
+    data_tests:
+    - relationships:
+        to: ref('dim_product')
+        field: product_key
+- name: fact_revenue
+  columns:
+  - name: revenue_key
+    data_tests:
+    - unique
+    - not_null
+  - name: amount_usd
+    data_tests:
+    - not_null
+- name: fact_inventory_snapshot
+  columns:
+  - name: inventory_key
+    data_tests:
+    - unique
+    - not_null
+- name: fact_production
+  columns:
+  - name: work_order_key
+    data_tests:
+    - unique
+    - not_null
+- name: mart_revenue_monthly
+  columns:
+  - name: posting_month
+    data_tests:
+    - unique
+    - not_null

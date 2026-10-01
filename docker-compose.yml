@@ -1,0 +1,15 @@
+services:
+  api:
+    build: { context: ., dockerfile: infra/docker/Dockerfile }
+    command: ["serve", "--host", "0.0.0.0"]
+    ports: ["8000:8000"]
+    environment:
+      EMBLEM_ENV: dev
+    read_only: true
+    tmpfs: ["/tmp", "/app/build"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+  seed:        # one-shot: builds the demo warehouse into the shared volume, then exits
+    profiles: ["seed"]
+    build: { context: ., dockerfile: infra/docker/Dockerfile }
+    command: ["demo", "--out", "/app/build/report.html"]

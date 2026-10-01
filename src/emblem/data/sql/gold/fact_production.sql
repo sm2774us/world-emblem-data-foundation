@@ -1,0 +1,6 @@
+-- Common model: production activity from the MES, keyed to ERP order and item.
+SELECT w.id AS work_order_key, w.bc_order_no AS order_no, w.item_no AS product_key, w.location_code AS location_key, w.machine,
+       w.qty_planned, w.qty_good, w.qty_scrap, w.qty_good / nullif(w.qty_planned, 0) AS yield_pct,
+       w.qty_scrap / nullif(w.qty_planned, 0) AS scrap_rate, w.status, w.started_at, w.finished_at,
+       date_diff('minute', w.started_at, w.finished_at) / 60.0 AS cycle_hours
+FROM {{ ref('stg_mes__work_orders') }} w

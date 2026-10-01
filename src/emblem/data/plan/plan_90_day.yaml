@@ -1,0 +1,252 @@
+# The 90-day plan is DATA, not prose: every milestone names the exact steps and changes, the artifact in this repo that
+# demonstrates it, and a machine verifier (`uv run emblem plan verify`). Baselines are ASSUMED until Day 1-30 discovery confirms them.
+phases:
+  - id: P1
+    days: "1-30"
+    name: Understand the environment
+    goal: Know every system, flow, owner and risk; publish an honest baseline.
+    milestones:
+      - id: M1.1
+        days: "1-7"
+        title: Inventory systems, data stores, integrations, jobs, reports and owners
+        jd: "Inventory the major systems, data stores, integrations, reports, and owners."
+        steps:
+          - "Day 1: obtain read-only admin views (BC web client + API setup, HubSpot settings, BigCommerce control panel, Optimizely, ad platforms, MES SQL Server catalog, Azure/M365 tenant, Power BI admin portal)."
+          - "Day 1-3: pull machine-readable inventories: BC API/job-queue entries, HubSpot workflows + private apps, BigCommerce webhooks + API accounts, SQL Agent jobs, Windows Task Scheduler, Power BI workspaces and refresh schedules."
+          - "Day 3-5: record each item in catalog/system_inventory.yaml (system, integration, job, report, owner, admin, store, access, mechanism, schedule, secret store, documented/monitored/retries/idempotent)."
+          - "Day 5-7: run the audit engine; review every finding with the system admin; mark each flag CONFIRMED or REFUTED in the YAML (git history = audit trail)."
+        changes:
+          - "Create the catalog as code (YAML in Git) instead of a spreadsheet; PR review by owners via CODEOWNERS."
+          - "Assign an interim owner to every ownerless item; no item stays 'null' past Day 10."
+        artifacts: [src/emblem/data/catalog/system_inventory.yaml, src/emblem/catalog/audit.py]
+        command: "uv run emblem audit"
+        verify: audit_inventory
+        exit_criteria: "100% of systems/integrations/jobs/reports inventoried with an owner and admin; findings list reviewed with owners."
+        metric: {name: Items with accountable owner, baseline: "~83% (assumed)", target: "100%"}
+      - id: M1.2
+        days: "3-15"
+        title: Meet technical teams and departments; capture pain points and planned projects
+        jd: "Meet with technical teams and business departments to understand current processes, pain points, and planned projects."
+        steps:
+          - "Day 3-10: 45-minute interviews: CTO, Infrastructure, Applications (BC), Finance, Operations, Ecommerce, Marketing, Sales, Director of AI. Same script: what decisions use data, which numbers are disputed, what breaks monthly."
+          - "Day 8-12: capture the disputed definitions (revenue, order, active customer, on-hand) with the owning leader and write them into catalog/glossary.yaml."
+          - "Day 12-15: collect planned projects (AI agents, MicroSaaS apps) and their data needs into downstream_consumers."
+        changes:
+          - "Each definition gets exactly one owning department and one gold model that implements it."
+          - "Publish a 1-page 'what I heard' readback to every interviewee for correction."
+        artifacts: [src/emblem/data/catalog/glossary.yaml]
+        command: "uv run emblem lineage --json"
+        verify: glossary_owned
+        exit_criteria: "Every disputed KPI has an owner, a written definition and a target model."
+        metric: {name: KPIs with signed-off definition, baseline: "0 of 7", target: "7 of 7"}
+      - id: M1.3
+        days: "8-22"
+        title: Map highest-risk and highest-value data flows
+        jd: "Map the highest-risk and highest-value data flows."
+        steps:
+          - "Day 8-14: trace customer, product, order, revenue, inventory, marketing and production end to end (source field -> integration -> report) for the 3 flows with the biggest money exposure: web order -> ERP -> invoice, inventory ERP -> web, ad spend -> ROI."
+          - "Day 14-20: score each flow by value (revenue touched) x risk (missing controls, weak secrets, manual steps) using the audit severity model."
+          - "Day 20-22: draw the as-is map from data (flow_map), colour integrations red/amber/green by control coverage."
+        changes:
+          - "Generate maps from YAML/lineage code so they cannot drift from reality; no hand-drawn Visio."
+        artifacts: [src/emblem/catalog/lineage.py, docs/lineage.md]
+        command: "uv run emblem lineage"
+        verify: flows_mapped
+        exit_criteria: "Top-3 value flows and top-3 risk flows documented with owners and failure modes."
+        metric: {name: Integrations rated red, baseline: "~6 of 8 (assumed)", target: "known and prioritised"}
+      - id: M1.4
+        days: "15-30"
+        title: Establish the baseline for quality, reliability, security and documentation
+        jd: "Establish an initial baseline for data quality, reliability, security, and documentation."
+        steps:
+          - "Day 15-20: stand up a read-only landing zone (bronze) with extracts from BC, HubSpot, BigCommerce and ad platforms using service principals with read scopes only."
+          - "Day 20-25: run the 26-check quality suite and the 6 reconciliations (orders, order value, revenue, inventory, customer counts) against that landing zone."
+          - "Day 25-28: compute the scorecard: reliability, security, documentation, ownership, automation, data quality."
+          - "Day 28-30: present the baseline and the planted/real defects found, each with business impact in dollars or hours."
+        changes:
+          - "Open one incident per failing control with severity, owner, runbook and a 'fix at the source' action."
+        artifacts: [src/emblem/quality/checks.py, src/emblem/quality/reconcile.py, src/emblem/data/quality/checks.yaml]
+        command: "uv run emblem demo"
+        verify: baseline
+        exit_criteria: "Written baseline scorecard approved by the CTO; every break has an owner."
+        metric: {name: Automated checks running daily, baseline: "0", target: "26"}
+  - id: P2
+    days: "31-60"
+    name: Define the plan
+    goal: Decide who owns what, where data lives and how it flows; get sign-off.
+    milestones:
+      - id: M2.1
+        days: "31-40"
+        title: System-of-record matrix for critical domains (with field-level authority)
+        jd: "Create the system-of-record matrix for critical data domains."
+        steps:
+          - "Day 31-34: for each of 10 domains list which system creates, which edits, which reads; record conflicts (e.g. HubSpot and BC both editing company)."
+          - "Day 34-38: workshop with each domain owner to choose ONE authority; allow field exceptions only where another system is genuinely better (web visibility, lifecycle stage)."
+          - "Day 38-40: encode as system_of_record.yaml; validator fails CI if an authority does not host the domain or a non-authority writes into it."
+        changes:
+          - "Single-writer rule: only the authority writes a domain; others get read-only copies or field-scoped writes."
+          - "Retire INT-04 (Zapier BC->HubSpot) and fold INT-03 into one governed company flow."
+        artifacts: [src/emblem/data/architecture/system_of_record.yaml, src/emblem/architecture/sor.py]
+        command: "uv run emblem sor"
+        verify: sor_valid
+        exit_criteria: "Matrix signed by the 5 business owners; validator green in CI."
+        metric: {name: Domains with one authority, baseline: "~4 of 10 (assumed)", target: "10 of 10"}
+      - id: M2.2
+        days: "36-48"
+        title: Common business entities, identifiers and shared definitions
+        jd: "Define common business entities and the most important shared data definitions."
+        steps:
+          - "Day 36-40: define keys: company_key (resolved), contact_key (email hash), product_key (BC item no.), order_no, revenue_key, inventory_key, location_key, work_order_key."
+          - "Day 40-44: build entity resolution for companies (exact normalised name, shared non-free domain, fuzzy name >= 0.92) with confidence + match rule stored per record."
+          - "Day 44-48: implement the common models as SQL (dim_company, dim_contact, dim_product, dim_location, fact_order_line, fact_revenue, fact_inventory_snapshot, fact_production)."
+        changes:
+          - "Keys are deterministic and stable (hash of lowest source id), so re-runs never renumber customers."
+          - "Matches below threshold go to a steward review queue instead of auto-merging."
+        artifacts: [src/emblem/pipelines/mdm.py, src/emblem/data/sql/gold]
+        command: "uv run emblem run"
+        verify: common_entities
+        exit_criteria: "All 8 entities materialised with unique keys; duplicate-customer rate measured."
+        metric: {name: Duplicate customer records, baseline: "5% of ERP cards (planted)", target: "0 unmerged"}
+      - id: M2.3
+        days: "41-52"
+        title: Target architecture, data platform and tool recommendation
+        jd: "Present the target architecture, governance model, security approach, and recommended technology plan."
+        steps:
+          - "Day 41-45: draft medallion architecture (bronze raw, silver typed/conformed, gold governed) with batch, event and API paths; ADR for each major choice."
+          - "Day 45-50: score Fabric, Databricks, Snowflake, BigQuery, Synapse and Redshift against weighted criteria; run weight-sensitivity analysis."
+          - "Day 50-52: present options, cost bands and a recommendation; keep pipeline code portable (SQL + Spark + Delta/Parquet) so the platform choice is reversible."
+        changes:
+          - "Business Central stays an ERP: no analytics or AI workload runs inside it."
+          - "Orchestration in Airflow (code-first, testable); transformations as versioned SQL/dbt models."
+        artifacts: [src/emblem/data/architecture/platform_options.yaml, docs/ARCHITECTURE.md, docs/adr]
+        command: "uv run emblem platform"
+        verify: target_arch
+        exit_criteria: "CTO approves platform and tooling; ADRs merged."
+        metric: {name: Decision robustness, baseline: "n/a", target: "winner holds under +/-50% weight change"}
+      - id: M2.4
+        days: "45-56"
+        title: Governance model and security approach
+        jd: "Establish practical standards for data ownership, access, classification, retention, and approved use."
+        steps:
+          - "Day 45-48: classify every contract column (public/internal/confidential/pii/restricted)."
+          - "Day 48-52: define roles and dataset entitlements; masking per classification; field encryption for restricted columns; keys in Key Vault."
+          - "Day 52-56: turn on audit logging with a hash chain; set retention per dataset; review with IT and Legal."
+        changes:
+          - "Access via governed gold views and APIs only; revoke direct production-database grants for BI and AI."
+          - "Secrets move to Key Vault; plaintext and personal tokens rotated."
+        artifacts: [src/emblem/data/governance/policies.yaml, src/emblem/security]
+        command: "uv run emblem governance"
+        verify: governance_ok
+        exit_criteria: "Policies approved by IT and Legal; audit chain verifies; retention dry-run reviewed."
+        metric: {name: Integrations on vaulted secrets, baseline: "~25% (assumed)", target: "100%"}
+      - id: M2.5
+        days: "52-60"
+        title: Prioritised roadmap by business value, risk, effort and AI readiness
+        jd: "Create a prioritized roadmap based on business value, risk, effort, and AI readiness."
+        steps:
+          - "Day 52-56: list candidate data products and fixes; score value, risk reduction, AI readiness (1-5) and effort (1-5)."
+          - "Day 56-60: rank by (value + risk + AI readiness) / effort; agree top 3 with the CTO and department leaders."
+        changes:
+          - "First pipeline = web order -> ERP -> revenue reconciliation (highest value and risk)."
+        artifacts: [src/emblem/plan/plan.py]
+        command: "uv run emblem plan roadmap"
+        verify: roadmap_ranked
+        exit_criteria: "Ranked roadmap with owners and dates accepted."
+        metric: {name: Backlog items scored, baseline: "0", target: "all"}
+  - id: P3
+    days: "61-90"
+    name: Prove the approach
+    goal: Ship one governed data product end to end, with tests, monitoring and standards others can copy.
+    milestones:
+      - id: M3.1
+        days: "61-75"
+        title: Deliver the first governed pipeline / shared data product
+        jd: "Deliver the first high-value governed pipeline or shared data product."
+        steps:
+          - "Day 61-65: write data contracts for BC orders/lines/invoices and BigCommerce orders; generate staging models from them."
+          - "Day 65-70: build idempotent bronze ingest (content-hash dedupe, watermark, quarantine) and gold revenue and order models."
+          - "Day 70-75: publish mart_revenue_monthly as the single Finance-approved revenue definition; cut the month-end pack over to it."
+        changes:
+          - "Retry with exponential backoff; transactions per dataset; replays are no-ops."
+          - "Schema drift: known renames mapped via contract aliases, additive fields logged, breaking changes quarantined."
+        artifacts: [src/emblem/pipelines/bronze.py, src/emblem/pipelines/staging.py, src/emblem/data/contracts/contracts.yaml]
+        command: "uv run emblem run"
+        verify: pipeline_governed
+        exit_criteria: "Month-end revenue reproduced from the governed mart; reruns are provably idempotent."
+        metric: {name: Month-end close data prep, baseline: "manual, days (assumed)", target: "automated, minutes"}
+      - id: M3.2
+        days: "70-82"
+        title: Automated testing, monitoring, reconciliation and incident response on the pilot
+        jd: "Add automated testing, monitoring, documentation, and reconciliation to the selected use case."
+        steps:
+          - "Day 70-74: enable quality checks (completeness, accuracy, duplication, freshness, consistency, volume, schema) in the DAG; failures stop downstream publish for critical checks."
+          - "Day 74-78: schedule reconciliation for orders, revenue, inventory and customer counts with tolerances and root-cause text."
+          - "Day 78-82: wire incidents: severity matrix, owner routing, escalation ladder, runbook links, auto-resolve; Prometheus metrics for pipeline health."
+        changes:
+          - "A reconciliation break opens an incident for the BUSINESS OWNER to fix at source; Data Platform does not patch the report."
+        artifacts: [src/emblem/ops/incidents.py, src/emblem/ops/monitor.py, dags, docs/runbooks]
+        command: "uv run emblem incidents"
+        verify: observability
+        exit_criteria: "Every failing check has an incident with owner, runbook and escalation; metrics scraped."
+        metric: {name: Mean time to detect a feed outage, baseline: "days (assumed)", target: "< 1 hour"}
+      - id: M3.3
+        days: "75-85"
+        title: Governed access for reporting, AI agents and internal apps
+        jd: "Prepare structured and approved data for AI agents, retrieval systems, automations, and internal MicroSaaS applications."
+        steps:
+          - "Day 75-78: publish the Power BI semantic model (relationships, DAX measures, RLS roles) over gold only."
+          - "Day 78-82: stand up the governed API (RBAC, masking, audit) and the AI retrieval index of approved non-PII documents."
+          - "Day 82-85: register agent tools as allow-listed parameterised queries; log and alert on usage."
+        changes:
+          - "Direct production access for reports and AI is switched off; every consumer uses gold, API or semantic model."
+        artifacts: [src/emblem/reporting/semantic_model.py, src/emblem/api/app.py, src/emblem/ai]
+        command: "uv run emblem serve"
+        verify: ai_access
+        exit_criteria: "One BI report and one agent tool run on governed access with audit evidence."
+        metric: {name: Consumers on direct production access, baseline: "~3 (assumed)", target: "0"}
+      - id: M3.4
+        days: "78-86"
+        title: Engineering standards, vendor accountability and operating process
+        jd: "Publish the initial engineering standards and operating process for future integrations."
+        steps:
+          - "Day 78-82: publish standards (contracts, idempotency, retries, tests, CI, secrets, naming, change process) and the integration intake checklist."
+          - "Day 82-86: score vendor-built integrations on documentation, security, maintainability and delivery quality; issue written acceptance conditions."
+        changes:
+          - "No integration goes live without a contract, a runbook, tests, monitoring and an owner (enforced in PR template and CI)."
+        artifacts: [docs/ENGINEERING-STANDARDS.md, src/emblem/governance/vendor.py, .github/PULL_REQUEST_TEMPLATE.md]
+        command: "uv run emblem vendors"
+        verify: standards_vendor
+        exit_criteria: "Standards published; vendors have dated remediation commitments."
+        metric: {name: Vendor integrations meeting standard, baseline: "0 of 2", target: "2 of 2 with dates"}
+      - id: M3.5
+        days: "84-90"
+        title: Updated roadmap, staffing recommendation, budget view and milestones
+        jd: "Provide an updated roadmap, staffing recommendation, budget view, and delivery milestones."
+        steps:
+          - "Day 84-88: re-score the roadmap with measured effort from the pilot; size staffing (data engineer, analytics engineer) and platform run cost."
+          - "Day 88-90: present results versus the Day-30 baseline and the next two quarters of milestones."
+        changes:
+          - "Budget is a range with explicit assumptions, refreshed each quarter."
+        artifacts: [src/emblem/data/plan/plan_90_day.yaml]
+        command: "uv run emblem plan budget"
+        verify: budget_ok
+        exit_criteria: "Roadmap, staffing and budget accepted by the CTO."
+        metric: {name: Baseline vs Day-90 scorecard, baseline: "Day 30", target: "improvement on every axis"}
+roadmap:   # candidate data products and fixes (value, risk, ai = 1-5 benefit; effort 1-5 cost)
+  - {id: R1, name: Web order -> ERP reconciliation and connector hardening, value: 5, risk: 5, ai: 3, effort: 3}
+  - {id: R2, name: Governed revenue mart and month-end automation, value: 5, risk: 4, ai: 3, effort: 3}
+  - {id: R3, name: Inventory event-driven sync BC -> web, value: 4, risk: 4, ai: 3, effort: 3}
+  - {id: R4, name: Golden company and contact (MDM) with steward queue, value: 4, risk: 3, ai: 5, effort: 4}
+  - {id: R5, name: Secrets to Key Vault and revoke direct DB access, value: 3, risk: 5, ai: 2, effort: 2}
+  - {id: R6, name: Marketing ROI mart and ad-spend automation, value: 3, risk: 2, ai: 2, effort: 2}
+  - {id: R7, name: AI retrieval index and agent tool gateway, value: 4, risk: 2, ai: 5, effort: 3}
+  - {id: R8, name: Production yield and scrap mart from MES, value: 3, risk: 2, ai: 3, effort: 3}
+budget:   # USD per year, assumptions explicit and editable
+  currency: USD
+  assumptions: ["Fabric F64-class capacity or Databricks equivalent", "Key Vault + Log Analytics", "1 additional analytics engineer from Q3"]
+  lines:
+    - {item: Data platform capacity (low-high), low: 36000, high: 78000}
+    - {item: Orchestration and monitoring (managed Airflow or AKS), low: 6000, high: 18000}
+    - {item: Security tooling (Key Vault, logging, scanning), low: 3000, high: 9000}
+    - {item: Vendor remediation work, low: 10000, high: 40000}
+    - {item: Analytics engineer (loaded cost), low: 120000, high: 160000}

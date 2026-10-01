@@ -1,0 +1,38 @@
+name: Housekeeping
+
+# GitHub never prunes workflow history. Weekly (or on demand) keep only the newest successful run per workflow.
+on:
+  schedule: [{ cron: "0 6 * * 0" }]
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+jobs:
+  prune:
+    name: prune (${{ matrix.workflow }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        workflow: [pr-verification.yml, release.yml, housekeeping.yml, codeql.yml, deploy.yml, secrets-scan.yml]
+    steps:
+      - name: Delete failed, cancelled, skipped and timed-out runs
+        uses: Mattraks/delete-workflow-runs@39f0bbed25d76b34de5594dceab824811479e5de # v2.0.6
+        with:
+          token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          workflow: ${{ matrix.workflow }}
+          retain_days: 0
+          keep_minimum_runs: 0
+          delete_run_by_conclusion_pattern: "cancelled,failure,skipped,timed_out,action_required"
+      - name: Delete all but the latest successful run
+        uses: Mattraks/delete-workflow-runs@39f0bbed25d76b34de5594dceab824811479e5de # v2.0.6
+        with:
+          token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          workflow: ${{ matrix.workflow }}
+          retain_days: 0
+          keep_minimum_runs: 1
+          delete_run_by_conclusion_pattern: "success"

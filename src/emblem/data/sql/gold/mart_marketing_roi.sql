@@ -1,0 +1,4 @@
+SELECT s.campaign, s.spend, coalesce(w.web_revenue, 0) AS web_revenue, coalesce(w.web_revenue, 0) / nullif(s.spend, 0) AS roas
+FROM (SELECT campaign, sum(spend) AS spend FROM {{ ref('fact_marketing_spend') }} GROUP BY 1) s
+LEFT JOIN (SELECT utm_campaign AS campaign, sum(total_inc_tax) AS web_revenue FROM {{ ref('stg_bg__orders') }}
+           WHERE status <> 'cancelled' GROUP BY 1) w USING (campaign)

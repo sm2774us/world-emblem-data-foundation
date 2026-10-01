@@ -1,0 +1,10 @@
+#!/bin/sh
+# Fast local gate: format, lint, and secrets scan of staged changes. Install with: make hooks
+set -e
+uv run ruff format --check src tests dags tools
+uv run ruff check src tests dags tools
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks protect --staged --config .gitleaks.toml --redact --no-banner
+else
+  echo "warning: gitleaks not installed locally; CI will scan (see make secrets)" >&2
+fi

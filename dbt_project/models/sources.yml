@@ -1,0 +1,24 @@
+version: 2
+sources:
+- name: silver
+  tables:
+  - name: stg_bc__customers
+  - name: stg_bc__inventory
+  - name: stg_bc__invoices
+  - name: stg_bc__items
+  - name: stg_bc__sales_lines
+  - name: stg_bc__sales_orders
+  - name: stg_bg__customers
+  - name: stg_bg__orders
+  - name: stg_bg__products
+  - name: stg_hs__companies
+  - name: stg_hs__contacts
+  - name: stg_hs__deals
+  - name: stg_mes__work_orders
+  - name: stg_mkt__ad_spend
+  - name: stg_opti__quotes
+  - name: xref_company
+- name: ref
+  tables:
+  - name: locations
+  - name: fx_rates

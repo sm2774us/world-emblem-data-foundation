@@ -1,0 +1,13 @@
+rubric:   # weights sum to 100; each item scored 0 (absent) 1 (partial) 2 (meets)
+  documentation:   {weight: 25, items: [architecture_diagram, field_mapping, runbook, error_catalogue]}
+  security:        {weight: 30, items: [secrets_in_vault, least_privilege_scopes, encryption_in_transit, audit_logging, pii_minimisation]}
+  maintainability: {weight: 25, items: [source_control_access, automated_tests, config_as_code, schema_change_handling]}
+  delivery_quality: {weight: 20, items: [retries_dead_letter, idempotency, monitoring_alerts, sla_and_support, handover_training]}
+blocking: [secrets_in_vault, idempotency]   # a 0 on any of these blocks acceptance regardless of total score
+reviews:
+  - vendor: Vendor A
+    integration: INT-01 BigCommerce orders to BC
+    scores: {architecture_diagram: 1, field_mapping: 1, runbook: 0, error_catalogue: 0, secrets_in_vault: 0, least_privilege_scopes: 1, encryption_in_transit: 2, audit_logging: 0, pii_minimisation: 1, source_control_access: 0, automated_tests: 0, config_as_code: 0, schema_change_handling: 0, retries_dead_letter: 0, idempotency: 0, monitoring_alerts: 0, sla_and_support: 1, handover_training: 0}
+  - vendor: Vendor B
+    integration: INT-03 HubSpot and BC customer sync
+    scores: {architecture_diagram: 2, field_mapping: 2, runbook: 1, error_catalogue: 1, secrets_in_vault: 2, least_privilege_scopes: 2, encryption_in_transit: 2, audit_logging: 1, pii_minimisation: 1, source_control_access: 1, automated_tests: 1, config_as_code: 1, schema_change_handling: 1, retries_dead_letter: 2, idempotency: 0, monitoring_alerts: 1, sla_and_support: 2, handover_training: 1}
