@@ -32,6 +32,7 @@ paths = [
   '''\.env\.example$''',
 ]
 regexes = [
+  '''local-demo-secret-change-me''',   # documented, deliberately fake value used in WALKTHROUGH.md
   '''EMBLEM_[A-Z_]+=\s*(change-me|<set-in-secret-manager>|)$''',
   '''(?i)99-\d{7}''',
 ]
