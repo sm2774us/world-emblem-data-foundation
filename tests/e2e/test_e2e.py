@@ -133,3 +133,16 @@ def test_cli_commands_run(server, tmp_path):
         check=False,
     )
     assert bad.returncode != 0 and "uv run emblem demo" in (bad.stderr + bad.stdout)
+
+
+def test_docs_command_is_self_contained_on_a_fresh_checkout(tmp_path):
+    """Regression: CI runs `emblem docs` on a clean clone with no prior demo; it must build its own data."""
+    (tmp_path / "docs").mkdir()
+    r = subprocess.run(
+        [sys.executable, "-m", "emblem", "--db", str(tmp_path / "w.duckdb"), "docs"],
+        cwd=tmp_path, capture_output=True, text=True, timeout=240, check=False,
+    )  # fmt: skip
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert (tmp_path / "docs" / "90-DAY-PLAN.md").stat().st_size > 1000 and (
+        tmp_path / "docs" / "powerbi" / "model.bim"
+    ).exists()

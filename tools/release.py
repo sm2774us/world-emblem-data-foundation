@@ -59,6 +59,15 @@ def notes(version: str, commits: list[dict[str, str | bool]], today: date | None
     return "\n".join(out)
 
 
+def sync_lock(text: str, version: str) -> str:
+    """Set the root package's own version in uv.lock (uv records it; a stale value breaks `uv sync --locked`)."""
+    pat = r'(\[\[package\]\]\nname = "world-emblem-data-foundation"\nversion = ")[^"]+(")'
+    new, n = re.subn(pat, rf"\g<1>{version}\g<2>", text, count=1)
+    if n != 1:
+        raise ValueError("root package entry not found in uv.lock")
+    return new
+
+
 def _git(*args: str) -> str:
     return subprocess.run(["git", *args], capture_output=True, text=True, check=True, cwd=ROOT).stdout.strip()  # noqa: S603,S607
 
@@ -104,6 +113,9 @@ def main(argv: list[str]) -> int:
         py.write_text(
             re.sub(r'^version = ".*"', f'version = "{version}"', py.read_text(), count=1, flags=re.M)
         )
+        lock = ROOT / "uv.lock"
+        if lock.exists():
+            lock.write_text(sync_lock(lock.read_text(), version))
         log = ROOT / "CHANGELOG.md"
         head, _, tail = log.read_text().partition("\n## ")
         log.write_text(head + "\n" + body + "\n## " + tail)

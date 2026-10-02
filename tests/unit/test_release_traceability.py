@@ -43,3 +43,24 @@ def test_dbt_models_in_sync_with_gold_sql():
     for p in sync_dbt.SRC.glob("*.sql"):
         assert (sync_dbt.OUT / p.name).read_text() == sync_dbt.convert(p.read_text()), p.name
     assert "source('silver'" in (sync_dbt.OUT / "dim_product.sql").read_text()
+
+
+def test_sync_lock_updates_only_root_package_version():
+    lock = (
+        '[[package]]\nname = "annotated-types"\nversion = "0.7.0"\n\n'
+        '[[package]]\nname = "world-emblem-data-foundation"\nversion = "1.0.0"\nsource = { editable = "." }\n'
+    )
+    out = release.sync_lock(lock, "1.1.1")
+    assert 'name = "world-emblem-data-foundation"\nversion = "1.1.1"' in out and 'version = "0.7.0"' in out
+    import pytest
+
+    with pytest.raises(ValueError, match="not found"):
+        release.sync_lock('[[package]]\nname = "x"\nversion = "1"\n', "2.0.0")
+
+
+def test_committed_lock_matches_pyproject_version():
+    ver = release.current_version()
+    lock = (ROOT / "uv.lock").read_text()
+    assert f'name = "world-emblem-data-foundation"\nversion = "{ver}"' in lock, (
+        "uv.lock is stale: run `uv lock`"
+    )

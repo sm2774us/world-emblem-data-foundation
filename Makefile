@@ -28,7 +28,7 @@ spark:
 airflow:
 	uv sync --locked --group airflow && uv run pytest -m airflow --no-cov
 dbt:
-	uv sync --locked --group dbt && uv run emblem demo && EMBLEM_DB=../build/emblem.duckdb uv run dbt build --project-dir dbt_project --profiles-dir dbt_project
+	uv sync --locked --group dbt && uv run emblem demo && EMBLEM_DB=build/emblem.duckdb uv run dbt build --project-dir dbt_project --profiles-dir dbt_project
 verify: lint types test e2e
 secrets:
 	gitleaks detect --source . --config .gitleaks.toml --redact --no-banner
