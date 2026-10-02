@@ -70,7 +70,7 @@ The main demo needs no cloud account, Docker, Java or database server. You need 
      ```bat
      mkdir %USERPROFILE%\code
      cd %USERPROFILE%\code
-     git clone https://github.com/YOUR_GITHUB_USER/world-emblem-data-foundation.git
+     git clone https://github.com/sm2774us/world-emblem-data-foundation.git
      cd world-emblem-data-foundation
      ```
 6. Install dependencies from the lock file (first run downloads Python 3.14 and about 60 packages):
@@ -204,7 +204,7 @@ git --version && uv --version && gh --version
 git config --global user.name "Your Name" && git config --global user.email "you@example.com" && git config --global init.defaultBranch main
 gh auth login
 
-git clone https://github.com/YOUR_GITHUB_USER/world-emblem-data-foundation.git ~/code/world-emblem-data-foundation
+git clone https://github.com/sm2774us/world-emblem-data-foundation.git ~/code/world-emblem-data-foundation
 cd ~/code/world-emblem-data-foundation          # ZIP route: unzip, then cd into the wedf folder
 make install && make hooks
 make demo
@@ -344,9 +344,9 @@ gh repo edit --add-topic data-engineering --add-topic python --add-topic uv --ad
 ```
 (If you have nothing new to commit, the `commit` line says so; continue.) Before pushing run the secret scan (Part 4) and confirm `.env` is not tracked (`git ls-files .env` prints nothing). The repository is **public**: never commit a real key.
 
-If your GitHub username is not `YOUR_GITHUB_USER`, replace it in `.github/CODEOWNERS`, `README.md` and `.github/ISSUE_TEMPLATE/config.yml` **before** the push:
+If your GitHub username is not `sm2774us`, replace it in `.github/CODEOWNERS`, `README.md` and `.github/ISSUE_TEMPLATE/config.yml` **before** the push:
 ```bash
-grep -rl YOUR_GITHUB_USER . --exclude-dir=.git --exclude-dir=.venv | xargs sed -i 's/YOUR_GITHUB_USER/YOUR_GITHUB_USER/g'
+grep -rl sm2774us . --exclude-dir=.git --exclude-dir=.venv | xargs sed -i 's/sm2774us/sm2774us/g'
 ```
 (Windows: VS Code Replace in Files, Ctrl+Shift+H.) Then `git add -A && git commit -m "docs: set repository owner"`.
 
@@ -432,7 +432,7 @@ Nothing is versioned by hand. Version and `CHANGELOG.md` come from the Conventio
 4. First release: no tag yet, so the version is whatever `pyproject.toml` says (1.0.0).
 
 Preview locally (read-only): `uv run python tools/release.py plan`.
-Verify the image attestation: `gh attestation verify oci://ghcr.io/YOUR_GITHUB_USER/world-emblem-data-foundation:1.0.0 --repo YOUR_GITHUB_USER/world-emblem-data-foundation`.
+Verify the image attestation: `gh attestation verify oci://ghcr.io/sm2774us/world-emblem-data-foundation:1.0.0 --repo sm2774us/world-emblem-data-foundation`.
 If the push step fails with **GH013 / protected branch**, the Actions bypass is missing: re-import the ruleset, or create a fine-grained token with `contents: write`, store it with `gh secret set RELEASE_TOKEN`, and add its owner to the bypass list.
 
 ## Part 12 · Housekeeping
