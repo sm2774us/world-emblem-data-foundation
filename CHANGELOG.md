@@ -2,6 +2,11 @@
 
 All notable changes are documented here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [SemVer](https://semver.org/).
 
+## [1.1.1] - 2026-10-02
+
+### Fixed
+- **ci:** verify gitleaks checksum under original filenames and keep uv.lock in sync with release version (#1)
+
 ## [1.1.0] - 2026-10-01
 
 ### Added
