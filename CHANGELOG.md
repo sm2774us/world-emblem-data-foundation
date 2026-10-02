@@ -2,6 +2,11 @@
 
 All notable changes are documented here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [SemVer](https://semver.org/).
 
+## [1.1.2] - 2026-10-02
+
+### Fixed
+- **config:** renaming YOUR_GITHUB_USER with atual username (#2)
+
 ## [1.1.1] - 2026-10-02
 
 ### Fixed
