@@ -133,7 +133,7 @@ jobs:
       - run: uv sync --locked --group dbt
       - run: uv run emblem demo
       - run: uv run dbt build --project-dir dbt_project --profiles-dir dbt_project
-        env: { EMBLEM_DB: "../build/emblem.duckdb" }
+        env: { EMBLEM_DB: "build/emblem.duckdb" }   # relative to the repo root (the step CWD)
 
   docker:
     name: docker (build, hardened smoke)
@@ -153,12 +153,28 @@ jobs:
           cache-to: type=gha,mode=max
       - name: Runs read-only, no capabilities, non-root; refuses unsafe production config
         run: |
+          set -euo pipefail
           test -n "$(docker inspect -f '{{.Config.User}}' emblem:ci)"
-          if docker run --rm -e EMBLEM_ENV=prod emblem:ci serve; then echo "must refuse to start without secrets"; exit 1; fi
-          docker run -d --name api --read-only --tmpfs /tmp --tmpfs /app/build --cap-drop ALL --security-opt no-new-privileges -p 8000:8000 \
-            -e EMBLEM_ENV=dev emblem:ci serve --host 0.0.0.0
-          for i in $(seq 1 40); do curl -fsS localhost:8000/healthz >/dev/null && break || sleep 1; done
-          curl -fsS localhost:8000/readyz
+          # production without secrets must refuse to start, and for the right reason
+          out=$(docker run --rm -e EMBLEM_ENV=prod emblem:ci serve 2>&1 || true)
+          echo "$out" | grep -q "prod requires EMBLEM_AUTH_SECRET" || { echo "$out"; echo "prod must refuse to start without secrets"; exit 1; }
+          docker run -d --name api --read-only --tmpfs /tmp --tmpfs /app/build:uid=10001,gid=10001,mode=0755 \
+            --cap-drop ALL --security-opt no-new-privileges -e HOME=/tmp -e EMBLEM_ENV=dev -p 8000:8000 \
+            emblem:ci serve --host 0.0.0.0
+          ok=0
+          for i in $(seq 1 40); do
+            if [ "$(docker inspect -f '{{.State.Running}}' api)" != "true" ]; then break; fi   # crashed: stop waiting
+            if curl -fsS http://127.0.0.1:8000/healthz >/dev/null 2>&1; then ok=1; break; fi
+            sleep 1
+          done
+          if [ "$ok" != "1" ]; then
+            echo "::group::container state and logs"
+            docker inspect -f '{{json .State}}' api
+            docker logs api
+            echo "::endgroup::"
+            exit 1
+          fi
+          curl -fsS http://127.0.0.1:8000/readyz
 
   terraform:
     name: terraform (fmt, validate)
